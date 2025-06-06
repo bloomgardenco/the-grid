@@ -1,0 +1,67 @@
+* {
+  font-family: 'Courier New', monospace;
+  font-variant: small-caps;
+}
+.grid {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.column {
+  background: #f4f4f4;
+  padding: 1rem;
+  border-radius: 10px;
+  width: 250px;
+}
+h2 {
+  font-size: 1.2rem;
+}
+button {
+  margin-top: 0.5rem;
+}
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-content {
+  background: white;
+  padding: 1rem;
+  border-radius: 10px;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+}
+.modal-content button {
+  font-family: 'Courier New', monospace;
+  font-variant: small-caps;
+  background: white;
+  border: 1px solid black;
+  padding: 0.3em 0.8em;
+  cursor: pointer;
+}
+input[type="file"] {
+  font-family: 'Courier New', monospace;
+  font-variant: small-caps;
+  background: white;
+  border: 1px solid black;
+  padding: 0.3em;
+}input[type="file"]::file-selector-button {
+  font-family: 'Courier New', monospace;
+  font-variant: small-caps;
+  background: white;
+  border: 1px solid black;
+  padding: 0.2em 0.5em;
+  cursor: pointer;
+}
