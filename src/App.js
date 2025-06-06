@@ -47,23 +47,25 @@ function App() {
     return unsubscribe;
   }, []);
 
-  useEffect(() => {
-    function start() {
-      gapi.client.init({
-        apiKey: API_KEY,
-        clientId: CLIENT_ID,
-        scope: SCOPES
-      }).then(() => {
-        gapi.auth2.getAuthInstance().isSignedIn.listen(setIsSignedIn);
-        setIsSignedIn(gapi.auth2.getAuthInstance().isSignedIn.get());
-        gapi.client.load('calendar', 'v3', () => {
-          console.log('Google Calendar API loaded.');
-        });
-      });
-    }
-    gapi.load('client:auth2', start);
-  }, []);
+ useEffect(() => {
+  function start() {
+    gapi.client.init({
+      apiKey: API_KEY,
+      clientId: CLIENT_ID,
+      scope: SCOPES,
+      discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"]
+    }).then(() => {
+      const auth = gapi.auth2.getAuthInstance();
+      auth.isSignedIn.listen(setIsSignedIn);
+      setIsSignedIn(auth.isSignedIn.get());
+      console.log('✅ Google Calendar API loaded and authenticated');
+    }).catch(err => {
+      console.error('❌ Error initializing GAPI client:', err);
+    });
+  }
 
+  gapi.load('client:auth2', start);
+}, []);
   const handleGoogleSignIn = () => {
     gapi.auth2.getAuthInstance().signIn();
   };
