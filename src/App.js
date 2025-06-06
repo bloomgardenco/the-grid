@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { db } from './firebase';
-import { collection, addDoc, getDocs } from 'firebase/firestore';
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy
+} from 'firebase/firestore';
+import { gapi } from 'gapi-script';
 
-const contexts = [
+const CONTEXTS = [
   'Leadership',
   'Ops Oversight',
   'Creative Work',
@@ -13,136 +20,140 @@ const contexts = [
   'Systems & Planning'
 ];
 
-const App = () => {
-  const [tasks, setTasks] = useState({});
-  const [selectedTask, setSelectedTask] = useState(null);
-  const [modalContext, setModalContext] = useState(null);
+const CLIENT_ID = '86209280303-j4e9u5c606btp3mipq433p413ergq8kp.apps.googleusercontent.com';
+const API_KEY = '';
+const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
+
+function App() {
+  const [tasks, setTasks] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [newTask, setNewTask] = useState({
+    context: '',
+    description: '',
+    notes: '',
+    deadline: '',
+    eventDate: '',
+    time: '',
+    location: '',
+    file: null
+  });
+  const [isSignedIn, setIsSignedIn] = useState(false);
 
   useEffect(() => {
-    const fetchTasks = async () => {
-      const snapshot = await getDocs(collection(db, "tasks"));
-      const fetchedTasks = {};
-      snapshot.forEach(doc => {
-        const task = doc.data();
-        const context = task.context;
-        if (!fetchedTasks[context]) fetchedTasks[context] = [];
-        fetchedTasks[context].push(task);
-      });
-      setTasks(fetchedTasks);
-    };
-    fetchTasks();
+    const q = query(collection(db, 'tasks'), orderBy('timestamp', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setTasks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return unsubscribe;
   }, []);
 
-  const addTask = (context) => {
-    const task = {
+  useEffect(() => {
+    function start() {
+      gapi.client.init({
+        apiKey: API_KEY,
+        clientId: CLIENT_ID,
+        scope: SCOPES
+      }).then(() => {
+        gapi.auth2.getAuthInstance().isSignedIn.listen(setIsSignedIn);
+        setIsSignedIn(gapi.auth2.getAuthInstance().isSignedIn.get());
+      });
+    }
+    gapi.load('client:auth2', start);
+  }, []);
+
+  const handleGoogleSignIn = () => {
+    gapi.auth2.getAuthInstance().signIn();
+  };
+
+  const addToCalendar = (task) => {
+    const [hour, minute] = task.time.split(':');
+    const eventStart = new Date(task.eventDate);
+    eventStart.setHours(hour);
+    eventStart.setMinutes(minute);
+    const eventEnd = new Date(eventStart.getTime() + 60 * 60 * 1000);
+
+    const event = {
+      summary: task.description,
+      location: task.location,
+      description: task.notes,
+      start: {
+        dateTime: eventStart.toISOString(),
+        timeZone: 'America/New_York',
+      },
+      end: {
+        dateTime: eventEnd.toISOString(),
+        timeZone: 'America/New_York',
+      },
+    };
+
+    gapi.client.calendar.events.insert({
+      calendarId: 'primary',
+      resource: event,
+    }).then(response => {
+      console.log('Event created:', response);
+    });
+  };
+
+  const handleSave = async () => {
+    const docRef = await addDoc(collection(db, 'tasks'), {
+      ...newTask,
+      timestamp: new Date()
+    });
+    if (newTask.eventDate && newTask.time && isSignedIn) {
+      addToCalendar(newTask);
+    }
+    setNewTask({
+      context: '',
       description: '',
       notes: '',
       deadline: '',
       eventDate: '',
       time: '',
       location: '',
-      attachment: ''
-    };
-    setSelectedTask(task);
-    setModalContext(context);
-  };
-
-  const saveTask = async () => {
-    const taskToSave = {
-      ...selectedTask,
-      context: modalContext,
-      timestamp: new Date()
-    };
-
-    await addDoc(collection(db, "tasks"), taskToSave);
-
-    setTasks(prev => ({
-      ...prev,
-      [modalContext]: [...(prev[modalContext] || []), selectedTask]
-    }));
-    setSelectedTask(null);
-    setModalContext(null);
-  };
-
-  const handleChange = (field, value) => {
-    setSelectedTask(prev => ({ ...prev, [field]: value }));
+      file: null
+    });
+    setShowModal(false);
   };
 
   return (
     <div className="App">
       <h1>The Grid</h1>
+      {!isSignedIn && <button onClick={handleGoogleSignIn}>Connect Google Calendar</button>}
       <div className="grid">
-        {contexts.map(context => (
+        {CONTEXTS.map(context => (
           <div key={context} className="column">
             <h2>{context}</h2>
-            <ul>
-              {(tasks[context] || []).map((task, idx) => (
-                <li key={idx}>{task.description || <em>Untitled Task</em>}</li>
-              ))}
-            </ul>
-            <button onClick={() => addTask(context)}>+ Add Task</button>
+            <button onClick={() => setShowModal(true)}>+ Add Task</button>
+            {tasks.filter(t => t.context === context).map(task => (
+              <div key={task.id} className="task">
+                <strong>{task.description}</strong>
+                <div>{task.notes}</div>
+              </div>
+            ))}
           </div>
         ))}
       </div>
-
-      {selectedTask && (
+      {showModal && (
         <div className="modal">
-          <div className="modal-content">
-            <h3>New Task in {modalContext}</h3>
-            <input
-              type="text"
-              placeholder="Task description"
-              value={selectedTask.description}
-              onChange={e => handleChange('description', e.target.value)}
-            />
-            <textarea
-              placeholder="Notes"
-              value={selectedTask.notes}
-              onChange={e => handleChange('notes', e.target.value)}
-            />
-            <label>
-              Deadline:
-              <input
-                type="date"
-                value={selectedTask.deadline}
-                onChange={e => handleChange('deadline', e.target.value)}
-              />
-            </label>
-            <label>
-              Event Date:
-              <input
-                type="date"
-                value={selectedTask.eventDate}
-                onChange={e => handleChange('eventDate', e.target.value)}
-              />
-            </label>
-            <label>
-              Time:
-              <input
-                type="time"
-                value={selectedTask.time}
-                onChange={e => handleChange('time', e.target.value)}
-              />
-            </label>
-            <input
-              type="text"
-              placeholder="Location"
-              value={selectedTask.location}
-              onChange={e => handleChange('location', e.target.value)}
-            />
-            <input
-              type="file"
-              onChange={e => handleChange('attachment', e.target.files[0]?.name)}
-            />
-            <div className="modal-actions">
-              <button onClick={saveTask}>Save Task</button>
-              <button onClick={() => setSelectedTask(null)}>Cancel</button>
-            </div>
-          </div>
+          <h3>New Task</h3>
+          <select value={newTask.context} onChange={e => setNewTask({ ...newTask, context: e.target.value })}>
+            <option value="">Select Context</option>
+            {CONTEXTS.map(context => (
+              <option key={context} value={context}>{context}</option>
+            ))}
+          </select>
+          <input placeholder="Task description" value={newTask.description} onChange={e => setNewTask({ ...newTask, description: e.target.value })} />
+          <textarea placeholder="Notes" value={newTask.notes} onChange={e => setNewTask({ ...newTask, notes: e.target.value })}></textarea>
+          <input type="date" value={newTask.deadline} onChange={e => setNewTask({ ...newTask, deadline: e.target.value })} />
+          <input type="date" value={newTask.eventDate} onChange={e => setNewTask({ ...newTask, eventDate: e.target.value })} />
+          <input type="time" value={newTask.time} onChange={e => setNewTask({ ...newTask, time: e.target.value })} />
+          <input placeholder="Location" value={newTask.location} onChange={e => setNewTask({ ...newTask, location: e.target.value })} />
+          <button onClick={handleSave}>Save</button>
+          <button onClick={() => setShowModal(false)}>Cancel</button>
         </div>
       )}
     </div>
   );
-};
+}
 
 export default App;
