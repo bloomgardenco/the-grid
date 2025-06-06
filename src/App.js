@@ -70,37 +70,41 @@ function App() {
     gapi.auth2.getAuthInstance().signIn();
   };
 
-  const addToCalendar = (task) => {
-    const [hour, minute] = task.time.split(':');
-    const eventStart = new Date(task.eventDate);
-    eventStart.setHours(hour);
-    eventStart.setMinutes(minute);
-    const eventEnd = new Date(eventStart.getTime() + 60 * 60 * 1000);
+ const addToCalendar = (task) => {
+  if (!gapi.client?.calendar) {
+    console.error('❌ Google Calendar API is not loaded.');
+    return;
+  }
 
-    const event = {
-      summary: task.description,
-      location: task.location,
-      description: task.notes,
-      start: {
-        dateTime: eventStart.toISOString(),
-        timeZone: 'America/New_York',
-      },
-      end: {
-        dateTime: eventEnd.toISOString(),
-        timeZone: 'America/New_York',
-      },
-    };
+  const [hour, minute] = task.time.split(':');
+  const eventStart = new Date(task.eventDate);
+  eventStart.setHours(hour);
+  eventStart.setMinutes(minute);
+  const eventEnd = new Date(eventStart.getTime() + 60 * 60 * 1000);
 
-    console.log('Preparing to insert event:', event);
-    gapi.client.calendar.events.insert({
-      calendarId: 'bloomgardenco@gmail.com', // 🔴 REPLACE WITH YOUR TARGET CALENDAR ID
-      resource: event,
-    }).then(response => {
-      console.log('Event created:', response);
-    }).catch(error => {
-      console.error('Calendar API error:', error);
-    });
+  const event = {
+    summary: task.description,
+    location: task.location,
+    description: task.notes,
+    start: {
+      dateTime: eventStart.toISOString(),
+      timeZone: 'America/New_York',
+    },
+    end: {
+      dateTime: eventEnd.toISOString(),
+      timeZone: 'America/New_York',
+    },
   };
+
+  gapi.client.calendar.events.insert({
+    calendarId: 'bloomgardenco@gmail.com', // Your calendar ID
+    resource: event,
+  }).then(response => {
+    console.log('✅ Event created:', response);
+  }).catch(error => {
+    console.error('❌ Calendar API error:', error);
+  });
+};
 
   const handleSave = async () => {
     const docRef = await addDoc(collection(db, 'tasks'), {
