@@ -50,18 +50,22 @@ function App() {
  useEffect(() => {
   function start() {
     gapi.client.init({
-      apiKey: API_KEY,
-      clientId: CLIENT_ID,
+      apiKey: AIzaSyCjJl8yCQFAFMh5OGyBCn-ZpnBpA6irNf4,
+      clientId: 86209280303-j4e9u5c606btp3mipq433p413ergq8kp.apps.googleusercontent.com,
       scope: SCOPES,
       discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"]
-    }).then(() => {
-      const auth = gapi.auth2.getAuthInstance();
-      auth.isSignedIn.listen(setIsSignedIn);
-      setIsSignedIn(auth.isSignedIn.get());
-      console.log('✅ Google Calendar API loaded and authenticated');
-    }).catch(err => {
-      console.error('❌ Error initializing GAPI client:', err);
-    });
+.then(() => {
+  const auth = gapi.auth2.getAuthInstance();
+  auth.isSignedIn.listen(setIsSignedIn);
+  setIsSignedIn(auth.isSignedIn.get());
+
+  // ✅ Explicitly load calendar API
+  gapi.client.load('calendar', 'v3').then(() => {
+    console.log('✅ Calendar API loaded and authenticated');
+  }).catch(err => {
+    console.error('❌ Error loading Calendar API:', err);
+  });
+})
   }
 
   gapi.load('client:auth2', start);
