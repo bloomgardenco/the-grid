@@ -20,7 +20,7 @@ const CONTEXTS = [
   'Systems & Planning'
 ];
 
-const CLIENT_ID = 'YO86209280303-j4e9u5c606btp3mipq433p413ergq8kp.apps.googleusercontent.com'; // 🔴 REPLACE WITH YOUR CLIENT ID
+const CLIENT_ID = '86209280303-j4e9u5c606btp3mipq433p413ergq8kp.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyCjJl8yCQFAFMh5OGyBCn-ZpnBpA6irNf4'; // 🔴 REPLACE WITH YOUR API KEY
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
 
