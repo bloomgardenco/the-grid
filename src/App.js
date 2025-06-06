@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+React, { useState, useEffect } from 'react';
 import './App.css';
 import { db } from './firebase';
 import {
@@ -20,8 +20,8 @@ const CONTEXTS = [
   'Systems & Planning'
 ];
 
-const CLIENT_ID = '86209280303-j4e9u5c606btp3mipq433p413ergq8kp.apps.googleusercontent.com';
-const API_KEY = '';
+const CLIENT_ID = 'YO86209280303-j4e9u5c606btp3mipq433p413ergq8kp.apps.googleusercontent.com'; // 🔴 REPLACE WITH YOUR CLIENT ID
+const API_KEY = 'AIzaSyCjJl8yCQFAFMh5OGyBCn-ZpnBpA6irNf4'; // 🔴 REPLACE WITH YOUR API KEY
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
 
 function App() {
@@ -56,6 +56,9 @@ function App() {
       }).then(() => {
         gapi.auth2.getAuthInstance().isSignedIn.listen(setIsSignedIn);
         setIsSignedIn(gapi.auth2.getAuthInstance().isSignedIn.get());
+        gapi.client.load('calendar', 'v3', () => {
+          console.log('Google Calendar API loaded.');
+        });
       });
     }
     gapi.load('client:auth2', start);
@@ -86,11 +89,14 @@ function App() {
       },
     };
 
+    console.log('Preparing to insert event:', event);
     gapi.client.calendar.events.insert({
-      calendarId: 'primary',
+      calendarId: 'bloomgardenco@gmail.com', // 🔴 REPLACE WITH YOUR TARGET CALENDAR ID
       resource: event,
     }).then(response => {
       console.log('Event created:', response);
+    }).catch(error => {
+      console.error('Calendar API error:', error);
     });
   };
 
