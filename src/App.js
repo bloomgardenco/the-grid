@@ -20,12 +20,9 @@ const CONTEXTS = [
   'Systems & Planning'
 ];
 
-// ====== FILL THESE IN ======
-const CLIENT_ID    = '86209280303-j4e9u5c606btp3mipq433p413ergq8kp.apps.googleusercontent.com';
-const API_KEY      = 'AIzaSyCjJl8yCQFAFMh5OGyBCn-ZpnBpA6irNf4';
+const CLIENT_ID = '86209280303-j4e9u5c606btp3mipq433p413ergq8kp.apps.googleusercontent.com';
+const API_KEY = 'AIzaSyCjJl8yCQFAFMh5OGyBCn-ZpnBpA6irNf4';
 const CALENDAR_ID = 'bloomgardenco@gmail.com';
-// ===========================
-
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
 
 function App() {
@@ -43,7 +40,6 @@ function App() {
   });
   const [isSignedIn, setIsSignedIn] = useState(false);
 
-  // Firestore subscription
   useEffect(() => {
     const q = query(collection(db, 'tasks'), orderBy('timestamp', 'desc'));
     return onSnapshot(q, snapshot => {
@@ -51,7 +47,6 @@ function App() {
     });
   }, []);
 
-  // Google API init with discoveryDocs
   useEffect(() => {
     function start() {
       gapi.client.init({
@@ -60,9 +55,9 @@ function App() {
         discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
         scope: SCOPES
       }).then(() => {
-         gapi.client.load('calendar', 'v3').then(() => {
-      console.log('✅ Calendar API loaded');
-      });
+        gapi.client.load('calendar', 'v3').then(() => {
+          console.log('✅ Calendar API loaded');
+        });
         const auth = gapi.auth2.getAuthInstance();
         auth.isSignedIn.listen(setIsSignedIn);
         setIsSignedIn(auth.isSignedIn.get());
@@ -72,6 +67,7 @@ function App() {
   }, []);
 
   const handleGoogleSignIn = () => {
+    console.log('🔐 Triggered Google sign-in');
     gapi.auth2.getAuthInstance().signIn();
   };
 
@@ -94,46 +90,28 @@ function App() {
       end:   { dateTime: eventEnd.toISOString(),   timeZone: 'America/New_York' },
     };
 
-    gapi.client.load('calendar', 'v3')
-  .then(() => console.log('✅ Calendar API loaded'))
-  .catch(err => console.error('❌ Failed to load Calendar API:', err));
-
-    if (!gapi.client.calendar?.events) {
-  console.error('❌ Calendar API not initialized');
-  return;
-}
+    console.log('📅 Sending event to Google Calendar:', event);
     gapi.client.calendar.events.insert({
       calendarId: CALENDAR_ID,
       resource: event
     }).then(response => {
-      console.log('Event created:', response);
+      console.log('✅ Event created:', response);
     }).catch(err => {
-      console.error('Failed to create event:', err);
+      console.error('❌ Failed to create event:', err);
     });
   };
 
   const handleSave = async () => {
-    // save to Firestore
+    console.log('💾 Save button clicked');
     await addDoc(collection(db, 'tasks'), {
       ...newTask,
       timestamp: new Date()
     });
 
-    // optionally add to Google Calendar
-    console.log("🧪 Checking if should add to calendar:", {
-  eventDate: newTask.eventDate,
-  time: newTask.time,
-  isSignedIn
-});
+    if (newTask.eventDate && newTask.time && isSignedIn) {
+      addToCalendar(newTask);
+    }
 
-if (newTask.eventDate && newTask.time && isSignedIn) {
-  console.log("🟢 Triggering addToCalendar");
-  addToCalendar(newTask);
-} else {
-  console.warn("🟡 Skipped addToCalendar - missing info or not signed in");
-}
-
-    // reset form
     setNewTask({
       context: '',
       description: '',
@@ -151,15 +129,16 @@ if (newTask.eventDate && newTask.time && isSignedIn) {
     <div className="App">
       <h1>The Grid</h1>
       {!isSignedIn && (
-        <button onClick={handleGoogleSignIn}>
-          Connect Google Calendar
-        </button>
+        <button onClick={handleGoogleSignIn}>Connect Google Calendar</button>
       )}
       <div className="grid">
         {CONTEXTS.map(context => (
           <div key={context} className="column">
             <h2>{context}</h2>
-            <button onClick={() => setShowModal(true)}>+ Add Task</button>
+            <button onClick={() => {
+              console.log(`➕ Opening modal for context: ${context}`);
+              setShowModal(true);
+            }}>+ Add Task</button>
             {tasks.filter(t => t.context === context).map(task => (
               <div key={task.id} className="task">
                 <strong>{task.description}</strong>
@@ -213,7 +192,10 @@ if (newTask.eventDate && newTask.time && isSignedIn) {
             onChange={e => setNewTask({ ...newTask, location: e.target.value })}
           />
           <button onClick={handleSave}>Save</button>
-          <button onClick={() => setShowModal(false)}>Cancel</button>
+          <button onClick={() => {
+            console.log('❌ Modal closed');
+            setShowModal(false);
+          }}>Cancel</button>
         </div>
       )}
     </div>
