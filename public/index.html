@@ -4,6 +4,8 @@ import { db } from './firebase';
 import {
   collection,
   addDoc,
+  updateDoc,
+  doc,
   onSnapshot,
   query,
   orderBy
@@ -17,7 +19,8 @@ const CONTEXTS = [
   'Communication',
   'Finance/Admin',
   'Sales & Clients',
-  'Systems & Planning'
+  'Systems & Planning',
+  'Complete'
 ];
 
 const CLIENT_ID    = '86209280303-j4e9u5c606btp3mipq433p413ergq8kp.apps.googleusercontent.com';
@@ -37,6 +40,7 @@ function App() {
     time: '',
     duration: 60,
     location: '',
+    completed: false,
     file: null
   });
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -114,9 +118,10 @@ function App() {
   };
 
   const handleSave = async () => {
-    await addDoc(collection(db, 'tasks'), {
+    const docRef = await addDoc(collection(db, 'tasks'), {
       ...newTask,
-      timestamp: new Date()
+      timestamp: new Date(),
+      completed: false
     });
 
     if (newTask.eventDate && newTask.time && isSignedIn) {
@@ -132,26 +137,31 @@ function App() {
       time: '',
       duration: 60,
       location: '',
+      completed: false,
       file: null
     });
     setShowModal(false);
+  };
+
+  const handleCheck = async (taskId, completed) => {
+    const taskRef = doc(db, 'tasks', taskId);
+    await updateDoc(taskRef, { completed });
   };
 
   return (
     <div className="App">
       <h1>The Grid</h1>
       {!isSignedIn && (
-        <button onClick={handleGoogleSignIn}>
-          Connect Google Calendar
-        </button>
+        <button onClick={handleGoogleSignIn}>Connect Google Calendar</button>
       )}
       <div className="grid">
         {CONTEXTS.map(context => (
           <div key={context} className="column">
             <h2>{context}</h2>
-            <button onClick={() => setShowModal(true)}>+ Add Task</button>
-            {tasks.filter(t => t.context === context).map(task => (
+            {context !== 'Complete' && <button onClick={() => setShowModal(true)}>+ Add Task</button>}
+            {tasks.filter(t => (context === 'Complete' ? t.completed : t.context === context && !t.completed)).map(task => (
               <div key={task.id} className="task">
+                <input type="checkbox" checked={task.completed} onChange={e => handleCheck(task.id, e.target.checked)} />
                 <strong>{task.description}</strong>
                 <div>{task.notes}</div>
               </div>
@@ -165,7 +175,7 @@ function App() {
           <h3>New Task</h3>
           <select value={newTask.context} onChange={e => setNewTask({ ...newTask, context: e.target.value })}>
             <option value="">Select Context</option>
-            {CONTEXTS.map(c => (
+            {CONTEXTS.filter(c => c !== 'Complete').map(c => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
