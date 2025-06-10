@@ -97,7 +97,7 @@ function App() {
     gapi.client.load('calendar', 'v3')
   .then(() => console.log('✅ Calendar API loaded'))
   .catch(err => console.error('❌ Failed to load Calendar API:', err));
-  
+
     if (!gapi.client.calendar?.events) {
   console.error('❌ Calendar API not initialized');
   return;
@@ -120,9 +120,18 @@ function App() {
     });
 
     // optionally add to Google Calendar
-    if (newTask.eventDate && newTask.time && isSignedIn) {
-      addToCalendar(newTask);
-    }
+    console.log("🧪 Checking if should add to calendar:", {
+  eventDate: newTask.eventDate,
+  time: newTask.time,
+  isSignedIn
+});
+
+if (newTask.eventDate && newTask.time && isSignedIn) {
+  console.log("🟢 Triggering addToCalendar");
+  addToCalendar(newTask);
+} else {
+  console.warn("🟡 Skipped addToCalendar - missing info or not signed in");
+}
 
     // reset form
     setNewTask({
