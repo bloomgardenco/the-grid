@@ -39,8 +39,7 @@ function App() {
     time: '',
     duration: 60,
     location: '',
-    file: null,
-    complete: false
+    file: null
   });
   const [isSignedIn, setIsSignedIn] = useState(false);
   const locationInputRef = useRef(null);
@@ -119,6 +118,7 @@ function App() {
   const handleSave = async () => {
     await addDoc(collection(db, 'tasks'), {
       ...newTask,
+      completed: false,
       timestamp: new Date()
     });
 
@@ -135,32 +135,41 @@ function App() {
       time: '',
       duration: 60,
       location: '',
-      file: null,
-      complete: false
+      file: null
     });
     setShowModal(false);
   };
 
-  const toggleComplete = async (task) => {
-    const updatedStatus = !task.complete;
-    await updateDoc(doc(db, 'tasks', task.id), { complete: updatedStatus });
+  const toggleComplete = async (id, value) => {
+    const taskRef = doc(db, 'tasks', id);
+    await updateDoc(taskRef, { completed: value });
   };
 
   return (
     <div className="App">
       <h1>The Grid</h1>
       {!isSignedIn && (
-        <button onClick={handleGoogleSignIn}>Connect Google Calendar</button>
+        <button onClick={handleGoogleSignIn}>
+          Connect Google Calendar
+        </button>
       )}
       <div className="grid">
         {CONTEXTS.map(context => (
           <div key={context} className="column">
             <h2>{context}</h2>
             <button onClick={() => setShowModal(true)}>+ Add Task</button>
-            {tasks.filter(t => t.context === context && !t.complete).map(task => (
+            {tasks.filter(t => t.context === context && !t.completed).map(task => (
               <div key={task.id} className="task">
-                <input type="checkbox" checked={task.complete} onChange={() => toggleComplete(task)} />
-                <strong>{task.description}</strong>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={task.completed || false}
+                    onChange={() => toggleComplete(task.id, !task.completed)}
+                  />
+                  <strong style={{ textDecoration: task.completed ? 'line-through' : 'none' }}>
+                    {task.description}
+                  </strong>
+                </label>
                 <div>{task.notes}</div>
               </div>
             ))}
@@ -168,10 +177,18 @@ function App() {
         ))}
         <div className="column">
           <h2>Complete</h2>
-          {tasks.filter(t => t.complete).map(task => (
+          {tasks.filter(t => t.completed).map(task => (
             <div key={task.id} className="task">
-              <input type="checkbox" checked={task.complete} onChange={() => toggleComplete(task)} />
-              <strong>{task.description}</strong>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={task.completed || false}
+                  onChange={() => toggleComplete(task.id, !task.completed)}
+                />
+                <strong style={{ textDecoration: task.completed ? 'line-through' : 'none' }}>
+                  {task.description}
+                </strong>
+              </label>
               <div>{task.notes}</div>
             </div>
           ))}
