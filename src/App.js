@@ -191,6 +191,11 @@ function App() {
             value={newTask.location}
             onChange={e => setNewTask({ ...newTask, location: e.target.value })}
           />
+          {!isSignedIn && (
+  <div style={{ color: 'red', marginBottom: '0.5rem' }}>
+    🔐 Please sign in to add this event to Google Calendar.
+  </div>
+)}
           <button onClick={handleSave}>Save</button>
           <button onClick={() => {
             console.log('❌ Modal closed');
