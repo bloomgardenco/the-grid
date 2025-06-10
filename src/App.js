@@ -38,12 +38,13 @@ function App() {
     deadline: '',
     eventDate: '',
     time: '',
-    durationMinutes: 60,
+    duration: '',
     location: '',
     file: null
   });
   const [isSignedIn, setIsSignedIn] = useState(false);
 
+  // Firestore subscription
   useEffect(() => {
     const q = query(collection(db, 'tasks'), orderBy('timestamp', 'desc'));
     return onSnapshot(q, snapshot => {
@@ -51,6 +52,7 @@ function App() {
     });
   }, []);
 
+  // Google API init with discoveryDocs
   useEffect(() => {
     function start() {
       gapi.client.init({
@@ -81,9 +83,10 @@ function App() {
     }
 
     const [hour, minute] = task.time.split(':').map(n => parseInt(n, 10));
+    const durationMinutes = parseInt(task.duration, 10) || 60;
     const eventStart = new Date(task.eventDate);
     eventStart.setHours(hour, minute);
-    const eventEnd = new Date(eventStart.getTime() + task.durationMinutes * 60 * 1000);
+    const eventEnd = new Date(eventStart.getTime() + durationMinutes * 60 * 1000);
 
     const event = {
       summary: task.description,
@@ -104,15 +107,18 @@ function App() {
   };
 
   const handleSave = async () => {
+    // save to Firestore
     await addDoc(collection(db, 'tasks'), {
       ...newTask,
       timestamp: new Date()
     });
 
+    // optionally add to Google Calendar
     if (newTask.eventDate && newTask.time && isSignedIn) {
       addToCalendar(newTask);
     }
 
+    // reset form
     setNewTask({
       context: '',
       description: '',
@@ -120,7 +126,7 @@ function App() {
       deadline: '',
       eventDate: '',
       time: '',
-      durationMinutes: 60,
+      duration: '',
       location: '',
       file: null
     });
@@ -190,8 +196,8 @@ function App() {
           <input
             type="number"
             placeholder="Duration (minutes)"
-            value={newTask.durationMinutes}
-            onChange={e => setNewTask({ ...newTask, durationMinutes: parseInt(e.target.value) || 0 })}
+            value={newTask.duration}
+            onChange={e => setNewTask({ ...newTask, duration: e.target.value })}
           />
           <input
             placeholder="Location"
