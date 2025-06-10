@@ -20,11 +20,9 @@ const CONTEXTS = [
   'Systems & Planning'
 ];
 
-// ====== FILL THESE IN ======
-const CLIENT_ID    = '86209280303-j4e9u5c606btp3mipq433p413ergq8kp.apps.googleusercontent.com';
-const API_KEY      = 'AIzaSyCjJl8yCQFAFMh5OGyBCn-ZpnBpA6irNf4';
+const CLIENT_ID = '86209280303-j4e9u5c606btp3mipq433p413ergq8kp.apps.googleusercontent.com';
+const API_KEY = 'AIzaSyCjJl8yCQFAFMh5OGyBCn-ZpnBpA6irNf4';
 const CALENDAR_ID = 'bloomgardenco@gmail.com';
-// ===========================
 
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
 
@@ -38,13 +36,12 @@ function App() {
     deadline: '',
     eventDate: '',
     time: '',
-    duration: '',
+    duration: 60,
     location: '',
     file: null
   });
   const [isSignedIn, setIsSignedIn] = useState(false);
 
-  // Firestore subscription
   useEffect(() => {
     const q = query(collection(db, 'tasks'), orderBy('timestamp', 'desc'));
     return onSnapshot(q, snapshot => {
@@ -52,7 +49,6 @@ function App() {
     });
   }, []);
 
-  // Google API init with discoveryDocs
   useEffect(() => {
     function start() {
       gapi.client.init({
@@ -61,7 +57,7 @@ function App() {
         discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
         scope: SCOPES
       }).then(() => {
-         gapi.client.load('calendar', 'v3').then(() => {
+        gapi.client.load('calendar', 'v3').then(() => {
           console.log('✅ Calendar API loaded');
         });
         const auth = gapi.auth2.getAuthInstance();
@@ -83,10 +79,9 @@ function App() {
     }
 
     const [hour, minute] = task.time.split(':').map(n => parseInt(n, 10));
-    const durationMinutes = parseInt(task.duration, 10) || 60;
     const eventStart = new Date(task.eventDate);
     eventStart.setHours(hour, minute);
-    const eventEnd = new Date(eventStart.getTime() + durationMinutes * 60 * 1000);
+    const eventEnd = new Date(eventStart.getTime() + task.duration * 60 * 1000);
 
     const event = {
       summary: task.description,
@@ -107,18 +102,15 @@ function App() {
   };
 
   const handleSave = async () => {
-    // save to Firestore
     await addDoc(collection(db, 'tasks'), {
       ...newTask,
       timestamp: new Date()
     });
 
-    // optionally add to Google Calendar
     if (newTask.eventDate && newTask.time && isSignedIn) {
       addToCalendar(newTask);
     }
 
-    // reset form
     setNewTask({
       context: '',
       description: '',
@@ -126,12 +118,14 @@ function App() {
       deadline: '',
       eventDate: '',
       time: '',
-      duration: '',
+      duration: 60,
       location: '',
       file: null
     });
     setShowModal(false);
   };
+
+  const durationOptions = Array.from({ length: 16 }, (_, i) => (i + 1) * 15);
 
   return (
     <div className="App">
@@ -193,12 +187,14 @@ function App() {
             value={newTask.time}
             onChange={e => setNewTask({ ...newTask, time: e.target.value })}
           />
-          <input
-            type="number"
-            placeholder="Duration (minutes)"
+          <select
             value={newTask.duration}
-            onChange={e => setNewTask({ ...newTask, duration: e.target.value })}
-          />
+            onChange={e => setNewTask({ ...newTask, duration: parseInt(e.target.value, 10) })}
+          >
+            {durationOptions.map(minutes => (
+              <option key={minutes} value={minutes}>{minutes} minutes</option>
+            ))}
+          </select>
           <input
             placeholder="Location"
             value={newTask.location}
