@@ -20,12 +20,9 @@ const CONTEXTS = [
   'Systems & Planning'
 ];
 
-// ====== FILL THESE IN ======
-const CLIENT_ID    = '86209280303-j4e9u5c606btp3mipq433p413ergq8kp.apps.googleusercontent.com';
-const API_KEY      = 'AIzaSyCjJl8yCQFAFMh5OGyBCn-ZpnBpA6irNf4';
+const CLIENT_ID = '86209280303-j4e9u5c606btp3mipq433p413ergq8kp.apps.googleusercontent.com';
+const API_KEY = 'AIzaSyCjJl8yCQFAFMh5OGyBCn-ZpnBpA6irNf4';
 const CALENDAR_ID = 'bloomgardenco@gmail.com';
-// ===========================
-
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
 
 function App() {
@@ -38,13 +35,12 @@ function App() {
     deadline: '',
     eventDate: '',
     time: '',
-    location: '',
     duration: 60,
+    location: '',
     file: null
   });
   const [isSignedIn, setIsSignedIn] = useState(false);
 
-  // Firestore subscription
   useEffect(() => {
     const q = query(collection(db, 'tasks'), orderBy('timestamp', 'desc'));
     return onSnapshot(q, snapshot => {
@@ -52,7 +48,6 @@ function App() {
     });
   }, []);
 
-  // Google API init with discoveryDocs
   useEffect(() => {
     function start() {
       gapi.client.init({
@@ -61,9 +56,9 @@ function App() {
         discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
         scope: SCOPES
       }).then(() => {
-         gapi.client.load('calendar', 'v3').then(() => {
-      console.log('✅ Calendar API loaded');
-      });
+        gapi.client.load('calendar', 'v3').then(() => {
+          console.log('✅ Calendar API loaded');
+        });
         const auth = gapi.auth2.getAuthInstance();
         auth.isSignedIn.listen(setIsSignedIn);
         setIsSignedIn(auth.isSignedIn.get());
@@ -92,7 +87,7 @@ function App() {
       location: task.location,
       description: task.notes,
       start: { dateTime: eventStart.toISOString(), timeZone: 'America/New_York' },
-      end:   { dateTime: eventEnd.toISOString(),   timeZone: 'America/New_York' },
+      end: { dateTime: eventEnd.toISOString(), timeZone: 'America/New_York' },
     };
 
     gapi.client.calendar.events.insert({
@@ -122,14 +117,12 @@ function App() {
       deadline: '',
       eventDate: '',
       time: '',
-      location: '',
       duration: 60,
+      location: '',
       file: null
     });
     setShowModal(false);
   };
-
-  const durationOptions = Array.from({ length: 16 }, (_, i) => 15 * (i + 1));
 
   return (
     <div className="App">
@@ -191,19 +184,20 @@ function App() {
             value={newTask.time}
             onChange={e => setNewTask({ ...newTask, time: e.target.value })}
           />
+          <select
+            value={newTask.duration}
+            onChange={e => setNewTask({ ...newTask, duration: parseInt(e.target.value) })}
+          >
+            {[...Array(16)].map((_, i) => {
+              const mins = (i + 1) * 15;
+              return <option key={mins} value={mins}>{mins} minutes</option>;
+            })}
+          </select>
           <input
             placeholder="Location"
             value={newTask.location}
             onChange={e => setNewTask({ ...newTask, location: e.target.value })}
           />
-          <select
-            value={newTask.duration}
-            onChange={e => setNewTask({ ...newTask, duration: parseInt(e.target.value, 10) })}
-          >
-            {durationOptions.map(min => (
-              <option key={min} value={min}>{min} minutes</option>
-            ))}
-          </select>
           <button onClick={handleSave}>Save</button>
           <button onClick={() => setShowModal(false)}>Cancel</button>
         </div>
