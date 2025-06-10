@@ -20,9 +20,12 @@ const CONTEXTS = [
   'Systems & Planning'
 ];
 
-const CLIENT_ID = '86209280303-j4e9u5c606btp3mipq433p413ergq8kp.apps.googleusercontent.com';
-const API_KEY = 'AIzaSyCjJl8yCQFAFMh5OGyBCn-ZpnBpA6irNf4';
+// ====== FILL THESE IN ======
+const CLIENT_ID    = '86209280303-j4e9u5c606btp3mipq433p413ergq8kp.apps.googleusercontent.com';
+const API_KEY      = 'AIzaSyCjJl8yCQFAFMh5OGyBCn-ZpnBpA6irNf4';
 const CALENDAR_ID = 'bloomgardenco@gmail.com';
+// ===========================
+
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
 
 function App() {
@@ -35,6 +38,7 @@ function App() {
     deadline: '',
     eventDate: '',
     time: '',
+    durationMinutes: 60,
     location: '',
     file: null
   });
@@ -55,7 +59,7 @@ function App() {
         discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
         scope: SCOPES
       }).then(() => {
-        gapi.client.load('calendar', 'v3').then(() => {
+         gapi.client.load('calendar', 'v3').then(() => {
           console.log('✅ Calendar API loaded');
         });
         const auth = gapi.auth2.getAuthInstance();
@@ -67,7 +71,6 @@ function App() {
   }, []);
 
   const handleGoogleSignIn = () => {
-    console.log('🔐 Triggered Google sign-in');
     gapi.auth2.getAuthInstance().signIn();
   };
 
@@ -80,7 +83,7 @@ function App() {
     const [hour, minute] = task.time.split(':').map(n => parseInt(n, 10));
     const eventStart = new Date(task.eventDate);
     eventStart.setHours(hour, minute);
-    const eventEnd = new Date(eventStart.getTime() + 60 * 60 * 1000);
+    const eventEnd = new Date(eventStart.getTime() + task.durationMinutes * 60 * 1000);
 
     const event = {
       summary: task.description,
@@ -90,19 +93,17 @@ function App() {
       end:   { dateTime: eventEnd.toISOString(),   timeZone: 'America/New_York' },
     };
 
-    console.log('📅 Sending event to Google Calendar:', event);
     gapi.client.calendar.events.insert({
       calendarId: CALENDAR_ID,
       resource: event
     }).then(response => {
-      console.log('✅ Event created:', response);
+      console.log('Event created:', response);
     }).catch(err => {
-      console.error('❌ Failed to create event:', err);
+      console.error('Failed to create event:', err);
     });
   };
 
   const handleSave = async () => {
-    console.log('💾 Save button clicked');
     await addDoc(collection(db, 'tasks'), {
       ...newTask,
       timestamp: new Date()
@@ -119,6 +120,7 @@ function App() {
       deadline: '',
       eventDate: '',
       time: '',
+      durationMinutes: 60,
       location: '',
       file: null
     });
@@ -129,16 +131,15 @@ function App() {
     <div className="App">
       <h1>The Grid</h1>
       {!isSignedIn && (
-        <button onClick={handleGoogleSignIn}>Connect Google Calendar</button>
+        <button onClick={handleGoogleSignIn}>
+          Connect Google Calendar
+        </button>
       )}
       <div className="grid">
         {CONTEXTS.map(context => (
           <div key={context} className="column">
             <h2>{context}</h2>
-            <button onClick={() => {
-              console.log(`➕ Opening modal for context: ${context}`);
-              setShowModal(true);
-            }}>+ Add Task</button>
+            <button onClick={() => setShowModal(true)}>+ Add Task</button>
             {tasks.filter(t => t.context === context).map(task => (
               <div key={task.id} className="task">
                 <strong>{task.description}</strong>
@@ -187,20 +188,18 @@ function App() {
             onChange={e => setNewTask({ ...newTask, time: e.target.value })}
           />
           <input
+            type="number"
+            placeholder="Duration (minutes)"
+            value={newTask.durationMinutes}
+            onChange={e => setNewTask({ ...newTask, durationMinutes: parseInt(e.target.value) || 0 })}
+          />
+          <input
             placeholder="Location"
             value={newTask.location}
             onChange={e => setNewTask({ ...newTask, location: e.target.value })}
           />
-          {!isSignedIn && (
-  <div style={{ color: 'red', marginBottom: '0.5rem' }}>
-    🔐 Please sign in to add this event to Google Calendar.
-  </div>
-)}
           <button onClick={handleSave}>Save</button>
-          <button onClick={() => {
-            console.log('❌ Modal closed');
-            setShowModal(false);
-          }}>Cancel</button>
+          <button onClick={() => setShowModal(false)}>Cancel</button>
         </div>
       )}
     </div>
