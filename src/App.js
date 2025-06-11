@@ -6,7 +6,9 @@ import {
   addDoc,
   onSnapshot,
   query,
-  orderBy
+  orderBy,
+  doc,
+  updateDoc
 } from 'firebase/firestore';
 import { gapi } from 'gapi-script';
 
@@ -28,6 +30,7 @@ const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
 function App() {
   const [tasks, setTasks] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [activeTask, setActiveTask] = useState(null);
   const [newTask, setNewTask] = useState({
     context: '',
     description: '',
@@ -37,10 +40,12 @@ function App() {
     time: '',
     duration: 60,
     location: '',
-    file: null
+    file: null,
+    completed: false
   });
   const [isSignedIn, setIsSignedIn] = useState(false);
 
+  // Subscribe to Firestore tasks
   useEffect(() => {
     const q = query(collection(db, 'tasks'), orderBy('timestamp', 'desc'));
     return onSnapshot(q, snapshot => {
@@ -48,6 +53,7 @@ function App() {
     });
   }, []);
 
+  // Initialize Google API
   useEffect(() => {
     function start() {
       gapi.client.init({
@@ -71,12 +77,18 @@ function App() {
     gapi.auth2.getAuthInstance().signIn();
   };
 
+  // Toggle completion flag in Firestore
+  const toggleComplete = async (id, completed) => {
+    const taskRef = doc(db, 'tasks', id);
+    await updateDoc(taskRef, { completed });
+  };
+
+  // Add event to Google Calendar
   const addToCalendar = (task) => {
     if (!gapi.client.calendar) {
       console.error('Calendar API not loaded!');
       return;
     }
-
     const [hour, minute] = task.time.split(':').map(n => parseInt(n, 10));
     const eventStart = new Date(task.eventDate);
     eventStart.setHours(hour, minute);
@@ -100,6 +112,7 @@ function App() {
     });
   };
 
+  // Save new task to Firestore (and optionally to Calendar)
   const handleSave = async () => {
     await addDoc(collection(db, 'tasks'), {
       ...newTask,
@@ -110,6 +123,7 @@ function App() {
       addToCalendar(newTask);
     }
 
+    // Reset form
     setNewTask({
       context: '',
       description: '',
@@ -119,7 +133,8 @@ function App() {
       time: '',
       duration: 60,
       location: '',
-      file: null
+      file: null,
+      completed: false
     });
     setShowModal(false);
   };
@@ -132,22 +147,42 @@ function App() {
           Connect Google Calendar
         </button>
       )}
+
       <div className="grid">
         {CONTEXTS.map(context => (
           <div key={context} className="column">
             <h2>{context}</h2>
-            <button onClick={() => setShowModal(true)}>+ Add Task</button>
-            {tasks.filter(t => t.context === context).map(task => (
-              <div key={task.id} className="task">
-                <strong>{task.description}</strong>
-                <div>{task.notes}</div>
-              </div>
-            ))}
+            <button onClick={() => { setActiveTask(null); setShowModal(true); }}>
+              + Add Task
+            </button>
+            {tasks
+              .filter(t => t.context === context)
+              .map(task => (
+                <div
+                  key={task.id}
+                  className="task"
+                  onClick={() => setActiveTask(task)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={task.completed}
+                    onClick={e => {
+                      e.stopPropagation();
+                      toggleComplete(task.id, !task.completed);
+                    }}
+                  />
+                  <strong style={{ textDecoration: task.completed ? 'line-through' : 'none' }}>
+                    {task.description}
+                  </strong>
+                </div>
+              ))}
           </div>
         ))}
       </div>
 
-      {showModal && (
+      {/* Modal: either new task form or details view */}
+      {showModal ? (
         <div className="modal">
           <h3>New Task</h3>
           <select
@@ -201,7 +236,22 @@ function App() {
           <button onClick={handleSave}>Save</button>
           <button onClick={() => setShowModal(false)}>Cancel</button>
         </div>
-      )}
+      ) : activeTask ? (
+        <div className="modal">
+          <h3>Task Details</n3>
+          <p><strong>Context:</strong> {activeTask.context}</p>
+          <p><strong>Description:</strong> {activeTask.description}</p>
+          <p><strong>Notes:</strong> {activeTask.notes}</p>
+          {activeTask.deadline && <p><strong>Deadline:</strong> {activeTask.deadline}</p>}
+          {activeTask.eventDate && (
+            <p>
+              <strong>Event:</strong> {activeTask.eventDate} @ {activeTask.time}
+            </p>
+          )}
+          {activeTask.location && <p><strong>Location:</strong> {activeTask.location}</p>}
+          <button onClick={() => setActiveTask(null)}>Close</button>
+        </div>
+      ) : null}
     </div>
   );
 }

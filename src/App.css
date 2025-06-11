@@ -65,3 +65,16 @@ input[type="file"] {
   padding: 0.2em 0.5em;
   cursor: pointer;
 }
+.task {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  font-size: 1rem;
+}
+
+.task input[type="checkbox"] {
+  transform: scale(1.2);
+  accent-color: black;
+  cursor: pointer;
+}
